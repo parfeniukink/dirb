@@ -2,10 +2,10 @@ import asyncio
 import sys
 from contextlib import suppress
 from itertools import chain, islice
+from typing import Iterable, Optional
 
 from bs4 import BeautifulSoup
-from httpx import AsyncClient, ConnectError, ConnectTimeout, Timeout
-
+from httpx import AsyncClient, ConnectError, ConnectTimeout, Response, Timeout
 
 # Configurations
 # ===============================================
@@ -25,44 +25,55 @@ TEXT_TO_MATCH = [
 # ===============================================
 
 
-words = open(WORDLIST_FILENAME).read().split("\n")[:-1]
-urls = ["".join([BASE_URL, word]) for word in words]
-
-
-def group_elements(lst, chunk_size):
+def group_elements(lst, chunk_size) -> list[Iterable]:
+    """Return list of iterables with size == CHUNK_SIZE"""
     lst = iter(lst)
     return list(iter(lambda: tuple(islice(lst, chunk_size)), ()))
 
 
-urls_batches = group_elements(urls, CHUNK_SIZE)
+def text_in_body(response: Response) -> bool:
+    """Check if text exists in body html"""
+    try:
+        soup = BeautifulSoup(response.content.decode("utf-8"), "html.parser")
+    except UnicodeDecodeError:
+        return False
+
+    text = str(soup)
+    for pattern in TEXT_TO_MATCH:
+        if pattern in text:
+            return False
+
+    return True
 
 
-async def fetch(url: str):
+async def fetch(url: str) -> Optional[Response]:
+    """Fetch the URL and check next:
+    - Status 100 < code < 400
+    - No Invalide text from TEXT_TO_MATCH on site
+    """
     async with AsyncClient(timeout=Timeout(5, read=None)) as client:
         with suppress(ConnectError, ConnectTimeout):
             response = await client.get(url)
-            if response.status_code == 200:
-                try:
-                    soup = BeautifulSoup(
-                        response.content.decode("utf-8"), "html.parser"
-                    )
-                except UnicodeDecodeError:
-                    return
+            if not response.status_code < 400:
+                return
 
-                text = str(soup)
-                for pattern in TEXT_TO_MATCH:
-                    if pattern in text:
-                        return
+            if not text_in_body(response):
+                return
 
-                print("[200]  ", url)
-                return response
+            print(f"[{response.status_code}]  ", url)
+            return response
 
 
 async def fetch_urls(urls: tuple):
     return [result for result in [await fetch(url) for url in urls] if result]
 
 
-if __name__ == "__main__":
+def main():
+    words = open(WORDLIST_FILENAME).read().split("\n")[:-1]
+    urls = ["".join([BASE_URL, word]) for word in words]
+
+    urls_batches = group_elements(urls, CHUNK_SIZE)
+
     loop = asyncio.get_event_loop()
     tasks = [fetch_urls(urls) for urls in urls_batches]
     results = loop.run_until_complete(asyncio.gather(*tasks))
@@ -74,5 +85,8 @@ if __name__ == "__main__":
 
     with open(RESULTS_FILENAME, "w") as file:
         text = "\n".join(filtered_results)
-        for result in filtered_results:
-            file.write(text)
+        file.write(text)
+
+
+if __name__ == "__main__":
+    main()
