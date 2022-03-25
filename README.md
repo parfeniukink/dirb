@@ -14,7 +14,16 @@ Beautifulsoup used here to search the specific content on the page.
 ```bash
 # Create Python isolated environment and activate it
 python -m venv venv
+
+
+# Activation
+
+## on Unix
 source venv/bin/activate
+
+## on Windows
+\venv\Scripts\activate
+
 
 # Install dependencies
 pip install -r requirements.txt

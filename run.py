@@ -9,7 +9,14 @@ from httpx import AsyncClient, ConnectError, ConnectTimeout, Response, Timeout
 
 # Configurations
 # ===============================================
-BASE_URL = sys.argv[1]
+try:
+    BASE_URL = sys.argv[1]
+except IndexError:
+    print(
+        "🔴 Syntax: python run.py <hostname>"
+        "\n🟡 Remember hostname should have a slash in the end"
+    )
+    raise SystemExit
 CHUNK_SIZE = 200
 WORDLIST_FILENAME = "./wordlist.txt"
 RESULTS_FILENAME = "./results.txt"
@@ -60,7 +67,7 @@ async def fetch(url: str) -> Optional[Response]:
             if not text_in_body(response):
                 return
 
-            print(f"[{response.status_code}]  ", url)
+            print(f"✅ [{response.status_code}]  ", url)
             return response
 
 
