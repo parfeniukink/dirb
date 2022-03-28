@@ -71,7 +71,7 @@ async def fetch(url: str) -> Optional[Response]:
             return response
 
 
-async def fetch_urls(urls: tuple):
+async def fetch_urls(urls: Iterable):
     return [result for result in [await fetch(url) for url in urls] if result]
 
 
