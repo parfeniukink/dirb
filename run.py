@@ -11,11 +11,9 @@ from httpx import AsyncClient, ConnectError, ConnectTimeout, Response, Timeout
 # ===============================================
 try:
     BASE_URL = sys.argv[1]
+    BASE_URL = "".join((BASE_URL, "/")) if BASE_URL[-1] != "/" else BASE_URL
 except IndexError:
-    print(
-        "🔴 Syntax: python run.py <hostname>"
-        "\n🟡 Remember hostname should have a slash in the end"
-    )
+    print("🔴 Syntax: python run.py <hostname>")
     raise SystemExit
 CHUNK_SIZE = 200
 WORDLIST_FILENAME = "./wordlist.txt"
